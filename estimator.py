@@ -35,7 +35,7 @@ PHYSICS_RESULTS_TABLE = {
     30:189,
     31:194,
     32:200
-}
+} #TO DO: move to an external file
 
 fluct = 0
 
@@ -75,9 +75,7 @@ def inverse(dict):
 
 def condense(arr, t):
     return list(np.array(arr[:-1]).reshape(-1,t).sum(axis=1)) + [arr[-1]]
-
-def educated_guess(k, n, t):
-    return bdsum(condense(wbd(n, k), t), 32)
+#Way too many useless/ugly functions above, need to refactor later
 
 class Estimator(Scene):
     drag_to_pan = False
@@ -93,94 +91,90 @@ class Estimator(Scene):
         self.play(Write(default_scores_text))
         self.play(Write(default_scores))
 
+        probabilities_distribution = condense(wbd(trials, successes), blocks)
 
-        blind_text = Text("Known probability assumption", font_size = 28)
-        blind_estimate = bd(successes/trials, 32)
-        blind_mean = sum([blind_estimate[i]*i for i in range(33)])
-        blind_fail = sum(blind_estimate[:5])
-        blind_perfect = blind_estimate[-1]
-        blind_mean_text = Text(f"Mean: {PHYSICS_RESULTS_TABLE[math.floor(blind_mean)]:.2f}", font_size = 20)
-        blind_fail_text = Text(f"Failure chance: {blind_fail*100:.2f}%", font_size = 20)
-        blind_perfect_text = Text(f"Perfect chance: {blind_perfect*100:.2f}%", font_size = 20)
-        blind_chart = BarChart(
-            values=blind_estimate,
+        probability_text = Text("Knownledge estimates", font_size = 28)
+        probability_mean = sum([probabilities_distribution[i]*i for i in range(33)])
+        probability_fail = sum(probabilities_distribution[:5])
+        probability_perfect = probabilities_distribution[-1]
+        probability_mean_text = Text(f"Mean: {PHYSICS_RESULTS_TABLE[math.floor(probability_mean)]:.2f}", font_size = 20)
+        probability_fail_text = Text(f"Failure chance: {probability_fail*100:.2f}%", font_size = 20)
+        probability_perfect_text = Text(f"Perfect chance: {probability_perfect*100:.2f}%", font_size = 20)
+        probability_chart = BarChart(
+            values=probabilities_distribution,
             height=3.5,
             width=5,
-            max_value=0.5,
+            max_value=1,
             bar_stroke_width=1,
             bar_names=[PHYSICS_RESULTS_TABLE[i] for i in range(33)],
             bar_label_scale_val=0.2
         )
-        blind_chart.to_corner(LEFT + DOWN)
-        top_blinds = []
-        for i, e in enumerate(sorted(list(zip(pseudodictify(blind_estimate))), reverse=True)[:3]):
-            top_blinds.append(Text(f"Value N{i+1}: {PHYSICS_RESULTS_TABLE[e[0][1]]}, {e[0][0]*100:.2f}%", font_size = 20))
+        probability_chart.to_corner(LEFT + DOWN)
+        top_probabilities = []
+        for i, e in enumerate(sorted(list(zip(pseudodictify(probabilities_distribution))), reverse=True)[:3]):
+            top_probabilities.append(Text(f"Value N{i+1}: {PHYSICS_RESULTS_TABLE[e[0][1]]}, {e[0][0]*100:.2f}%", font_size = 20))
             if not i:
-                top_blinds[-1].next_to(blind_chart, UP)
-                top_blinds[-1].align_to(blind_chart, RIGHT)
+                top_probabilities[-1].next_to(probability_chart, UP)
+                top_probabilities[-1].align_to(probability_chart, RIGHT)
             else:
-                top_blinds[-1].next_to(top_blinds[-2], UP)
-                top_blinds[-1].align_to(top_blinds[-2], RIGHT)
-        blind_mean_text.next_to(blind_chart, UP)
-        blind_mean_text.align_to(blind_chart, LEFT)
-        blind_fail_text.next_to(blind_mean_text, UP)
-        blind_fail_text.align_to(blind_mean_text, LEFT)
-        blind_perfect_text.next_to(blind_fail_text, UP)
-        blind_perfect_text.align_to(blind_fail_text, LEFT)
-        blind_text.next_to(blind_perfect_text, UP)
-        blind_text.align_to(blind_chart, RIGHT)
-        self.play(Write(blind_text))
-        self.add(blind_chart)
-        self.play(Write(blind_mean_text))
-        self.play(Write(blind_fail_text))
-        self.play(Write(blind_perfect_text))
-        for e in top_blinds:
+                top_probabilities[-1].next_to(top_probabilities[-2], UP)
+                top_probabilities[-1].align_to(top_probabilities[-2], RIGHT)
+        probability_mean_text.next_to(probability_chart, UP)
+        probability_mean_text.align_to(probability_chart, LEFT)
+        probability_fail_text.next_to(probability_mean_text, UP)
+        probability_fail_text.align_to(probability_mean_text, LEFT)
+        probability_perfect_text.next_to(probability_fail_text, UP)
+        probability_perfect_text.align_to(probability_fail_text, LEFT)
+        probability_text.next_to(probability_perfect_text, UP)
+        probability_text.align_to(probability_chart, RIGHT)
+        self.play(Write(probability_text))
+        self.add(probability_chart)
+        self.play(Write(probability_mean_text))
+        self.play(Write(probability_fail_text))
+        self.play(Write(probability_perfect_text))
+        for e in top_probabilities:
             self.play(Write(e))
 
-        educated_text = Text("Weighted probability guesses", font_size = 28)
-        educated_estimate = educated_guess(successes, trials, blocks)
-        educated_mean = sum([educated_estimate[i]*i for i in range(33)])
-        educated_fail = sum(educated_estimate[:5])
-        educated_perfect = educated_estimate[-1]
-        educated_mean_text = Text(f"Mean: {PHYSICS_RESULTS_TABLE[math.floor(educated_mean)]:.2f}", font_size = 20)
-        educated_fail_text = Text(f"Failure chance: {educated_fail*100:.2f}%", font_size = 20)
-        educated_perfect_text = Text(f"Perfect chance: {educated_perfect*100:.2f}%", font_size = 20)
-        educated_chart = BarChart(
-            values=educated_estimate,
+        final_text = Text("Real result estimates", font_size = 28)
+        final_estimate = bdsum(probabilities_distribution, 32)
+        final_mean = sum([final_estimate[i]*i for i in range(33)])
+        final_fail = sum(final_estimate[:5])
+        final_perfect = final_estimate[-1]
+        final_mean_text = Text(f"Mean: {PHYSICS_RESULTS_TABLE[math.floor(final_mean)]:.2f}", font_size = 20)
+        final_fail_text = Text(f"Failure chance: {final_fail*100:.2f}%", font_size = 20)
+        final_perfect_text = Text(f"Perfect chance: {final_perfect*100:.2f}%", font_size = 20)
+        final_chart = BarChart(
+            values=final_estimate,
             height=3.5,
             width=5,
-            max_value=0.5,
+            max_value=1,
             bar_stroke_width=1,
             bar_names=[PHYSICS_RESULTS_TABLE[i] for i in range(33)],
             bar_label_scale_val=0.2
         )
-        educated_chart.to_corner(RIGHT + DOWN)
-        top_educated = []
-        for i, e in enumerate(sorted(list(zip(pseudodictify(educated_estimate))), reverse=True)[:3]):
-            top_educated.append(Text(f"Value N{i+1}: {PHYSICS_RESULTS_TABLE[e[0][1]]}, {e[0][0]*100:.2f}%", font_size = 20))
+        final_chart.to_corner(RIGHT + DOWN)
+        top_finals = []
+        for i, e in enumerate(sorted(list(zip(pseudodictify(final_estimate))), reverse=True)[:3]):
+            top_finals.append(Text(f"Value N{i+1}: {PHYSICS_RESULTS_TABLE[e[0][1]]}, {e[0][0]*100:.2f}%", font_size = 20))
             if not i:
-                top_educated[-1].next_to(educated_chart, UP)
-                top_educated[-1].align_to(educated_chart, RIGHT)
+                top_finals[-1].next_to(final_chart, UP)
+                top_finals[-1].align_to(final_chart, RIGHT)
             else:
-                top_educated[-1].next_to(top_educated[-2], UP)
-                top_educated[-1].align_to(top_educated[-2], RIGHT)
-        educated_mean_text.next_to(educated_chart, UP)
-        educated_mean_text.align_to(educated_chart, LEFT)
-        educated_fail_text.next_to(educated_mean_text, UP)
-        educated_fail_text.align_to(educated_mean_text, LEFT)
-        educated_perfect_text.next_to(educated_fail_text, UP)
-        educated_perfect_text.align_to(educated_fail_text, LEFT)
-        educated_text.next_to(educated_perfect_text, UP)
-        educated_text.align_to(educated_chart, RIGHT)
-        self.play(Write(educated_text))
-        self.add(educated_chart)
-        self.play(Write(educated_mean_text))
-        self.play(Write(educated_fail_text))
-        self.play(Write(educated_perfect_text))
-        for e in top_educated:
+                top_finals[-1].next_to(top_finals[-2], UP)
+                top_finals[-1].align_to(top_finals[-2], RIGHT)
+        final_mean_text.next_to(final_chart, UP)
+        final_mean_text.align_to(final_chart, LEFT)
+        final_fail_text.next_to(final_mean_text, UP)
+        final_fail_text.align_to(final_mean_text, LEFT)
+        final_perfect_text.next_to(final_fail_text, UP)
+        final_perfect_text.align_to(final_fail_text, LEFT)
+        final_text.next_to(final_perfect_text, UP)
+        final_text.align_to(final_chart, RIGHT)
+        self.play(Write(final_text))
+        self.add(final_chart)
+        self.play(Write(final_mean_text))
+        self.play(Write(final_fail_text))
+        self.play(Write(final_perfect_text))
+        for e in top_finals:
             self.play(Write(e))
 
-
-print(sum(wbd(200, 100)))
-#sums = wbdsum(32, 27)
-#print(np.subtract(sums, bd(27/32, 32)), sum(sums), sum(bd(np.float128(27/32), 32)))
