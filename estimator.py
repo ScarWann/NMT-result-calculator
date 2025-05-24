@@ -6,7 +6,7 @@ fluct = 0
 table = 0
 
 def get_table():
-    return pd.DataFrame(pd.read_json("tables.json"))[input()]
+    return pd.to_numeric(pd.DataFrame(pd.read_json("tables.json"))[input("Enter subject name ")].dropna(), downcast="integer")
 
 def EValue(plist: list, vlist: list):
     return sum([plist[i]*vlist[i] for i in range(len(plist))])
@@ -29,19 +29,6 @@ def bdsum(plist, n):
     bds = list(zip(*bds))
     return [sum(bd)/sum(plist) for bd in bds]
 
-def swbd(i, n, k):
-    global fluct
-    sbd = np.array(bd(np.float128(i/n), n))
-    fluct += sbd[k]
-    return sbd * sbd[k]
-
-def wbdsum(n, k):
-    global fluct
-    fluct = 0
-    wbds = [swbd(i, n, k) for i in range(n+1)]
-    wbds = list(zip(*wbds))
-    return [sum(wbd)/fluct for wbd in wbds]
-
 def pseudodictify(List):
     return [[e,i] for i, e in enumerate(List)]
 
@@ -49,7 +36,10 @@ def inverse(dict):
     return {dict[i]:i for i in dict}
 
 def condense(arr, t):
-    return list(np.array(arr[:-1]).reshape(-1,t).sum(axis=1)) + [arr[-1]]
+    chunks = [arr[::-1][i*t:(i+1)*t] for i in range((len(arr)+t+1)//t)][::-1]
+    return [sum(chunk) for chunk in chunks]
+#NEEDS TO BECOME OBSOLETE DUE TO SWITCHING FROM DISCRETE TO CONTINUOUS CALCULATIONS, PRODUCES ERRORS WAY TOO BIG TO BE NEGLIGIBLE FOR NEAR-PERFECT CASES 
+
 #Way too many useless/ugly functions above, need to refactor later
 
 class Estimator(Scene):
@@ -59,8 +49,8 @@ class Estimator(Scene):
         global table
 
         table = get_table()
-        successes = int(input())
-        trials = int(input())
+        successes = int(input("Enter total points gained over all tests "))
+        trials = int(input("Enter maximum possible points over all tests "))
         table_size = len(table)
         blocks = trials // (table_size-1)
         default_scores_text = Text("Average given score:")
