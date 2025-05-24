@@ -4,6 +4,7 @@ import pandas as pd
 
 fluct = 0
 table = 0
+EPSILON = 0.005
 
 def get_table():
     return pd.to_numeric(pd.DataFrame(pd.read_json("tables.json"))[input("Enter subject name ")].dropna(), downcast="integer")
@@ -42,7 +43,7 @@ def condense(arr, t):
 
 #Way too many useless/ugly functions above, need to refactor later
 
-class Estimator(Scene):
+class Estimator_Discrete(Scene):
     drag_to_pan = False
 
     def construct(self):
@@ -146,3 +147,43 @@ class Estimator(Scene):
         self.play(Write(final_perfect_text))
         for e in top_finals:
             self.play(Write(e))
+
+class Estimator_Continuous(Scene):
+    drag_to_pan = False
+
+    def construct(self):
+        global table
+
+        table = get_table()
+        successes = int(input("Enter total points gained over all tests "))
+        trials = int(input("Enter maximum possible points over all tests "))
+        table_size = len(table)
+        blocks = trials // (table_size-1)
+        default_scores_text = Text("Average given score:")
+        default_scores = Text(f"""{table[math.floor(successes/trials*(table_size-1))]}-{table[math.ceil(successes/trials*(table_size-1))]}""")
+        default_scores_text.to_edge(UP + LEFT)
+        default_scores.next_to(default_scores_text, RIGHT)
+        self.play(Write(default_scores_text))
+        self.play(Write(default_scores))
+
+        probabilities_distribution = wbd(trials, successes)
+        print(probabilities_distribution)
+
+        probabilty_axes = Axes((0,1), (0,1), height=3.5, width=5)
+        probabilty_axes.add_coordinate_labels()
+        probability_text = Text("Knowledge estimates", font_size = 28)
+        probability_mean = sum([probabilities_distribution[i]*i/blocks for i in range(trials+1)])
+        probability_deviation = standard_deviation(probabilities_distribution, [i for i in range(trials+1)], probability_mean)
+        probability_perfect = probabilities_distribution[-1]
+        probability_mean_text = Text(f"Mean: {table[math.floor(probability_mean)]:.2f}", font_size = 20)
+        probability_deviation_text = Text(f"Standard deviation: {probability_deviation:.2f}", font_size = 20)
+        probability_perfect_text = Text(f"Perfect chance: {probability_perfect*100:.2f}%", font_size = 20)
+        probability_graph = probabilty_axes.get_graph(
+            lambda x: probabilities_distribution[math.ceil(x*len(probabilities_distribution))-1]/max(probabilities_distribution),
+            x_range=[0,1,0.0005]
+        )
+        self.play(Write(probabilty_axes, lag_ratio=0.01, run_time=1))
+        self.play(ShowCreation(probability_graph))
+        #probability_graph.to_corner(LEFT + DOWN)
+        self.add(probability_graph)
+        
