@@ -4,7 +4,7 @@ import pandas as pd
 
 fluct = 0
 table = 0
-EPSILON = 0.005
+EPSILON = 0.002
 
 def get_table():
     return pd.to_numeric(pd.DataFrame(pd.read_json("tables.json"))[input("Enter subject name ")].dropna(), downcast="integer")
@@ -16,10 +16,10 @@ def standard_deviation(plist: list, vlist: list, mean, f = lambda x, mean: (x - 
     return math.sqrt(sum([plist[i]*f(vlist[i], mean) for i in range(len(plist))]))
 
 def bf(p, n, k):
-    return math.comb(n, k)*(p**k)*((1-p)**(n-k))
+    return np.float128(math.comb(n, k))*(p**k)*((1-p)**(n-k))
 
 def wbd(n, k):
-    distribution = np.array([bf(i*EPSILON/n, n, k) for i in range(int((n+1)/EPSILON))])
+    distribution = np.array([bf(i*EPSILON, n, k) for i in range(int(1/EPSILON))])
     return  distribution / sum(distribution)
 
 def bd(p, n):
@@ -39,11 +39,11 @@ def inverse(dict):
 def condense(arr, t):
     chunks = [arr[::-1][i*t:(i+1)*t] for i in range((len(arr)+t+1)//t)][::-1]
     return [sum(chunk) for chunk in chunks]
-#NEEDS TO BECOME OBSOLETE DUE TO SWITCHING FROM DISCRETE TO CONTINUOUS CALCULATIONS, PRODUCES ERRORS WAY TOO BIG TO BE NEGLIGIBLE FOR NEAR-PERFECT CASES 
+#Not obsolete now, the whole discrete part is obsolete instead
 
 #Way too many useless/ugly functions above, need to refactor later
 
-class Estimator_Discrete(Scene):
+class Estimator_Discrete(Scene): #Obsolete
     drag_to_pan = False
 
     def construct(self):
@@ -167,26 +167,61 @@ class Estimator_Continuous(Scene):
         self.play(Write(default_scores))
 
         probabilities_distribution = wbd(trials, successes)
-        print(len(probabilities_distribution))
+        condensed_pdistribution = condense(probabilities_distribution, blocks)
 
-        probabilty_axes = Axes((0,1), (0,1), height=3.5, width=5)
-        probabilty_axes.add_coordinate_labels()
+        probability_axes = Axes((0,1), (0,1), height=3.5, width=5)
+        probability_axes.add_coordinate_labels()
         probability_text = Text("Knowledge estimates", font_size = 28)
-        probability_mean = sum([probabilities_distribution[i]*i*EPSILON/blocks for i in range(int((trials+1)/EPSILON))])
-        probability_deviation = standard_deviation(probabilities_distribution, [i*EPSILON/blocks for i in range(int((trials+1)/EPSILON))], probability_mean)
-        probability_perfect = probabilities_distribution[-1]
+        probability_mean = sum([probabilities_distribution[i]*i*EPSILON*(table_size-1) for i in range(int(1/EPSILON))])
+        probability_deviation = standard_deviation(probabilities_distribution, [i*EPSILON*(table_size-1) for i in range(int(1/EPSILON))], probability_mean)
+        probability_perfect = condensed_pdistribution[-1]
         print(probability_deviation, probability_mean)
-        #probability_mean_text = Text(f"Mean: {table[math.floor(probability_mean)]:.2f}", font_size = 20)
+        probability_mean_text = Text(f"Mean: {table[math.floor(probability_mean)]:.2f}", font_size = 20)
         probability_deviation_text = Text(f"Standard deviation: {probability_deviation:.2f}", font_size = 20)
         probability_perfect_text = Text(f"Perfect chance: {probability_perfect*100:.2f}%", font_size = 20)
-        probability_graph = probabilty_axes.get_graph(
+        probability_graph = probability_axes.get_graph(
             lambda x: probabilities_distribution[math.ceil(x*len(probabilities_distribution))-1]/max(probabilities_distribution),
             use_smoothing=False,
             color=YELLOW,
             x_range=[0,1,EPSILON]
         )
-        self.play(Write(probabilty_axes, lag_ratio=0.01, run_time=1))
+        probability_axes.to_corner(LEFT + DOWN)
+        self.play(Write(probability_axes, lag_ratio=0.01, run_time=1))
         self.play(ShowCreation(probability_graph))
-        #probability_graph.to_corner(LEFT + DOWN)
-        self.add(probability_graph)
+        top_probabilities = []
+        for i, e in enumerate(sorted(list(zip(pseudodictify(condensed_pdistribution))), reverse=True)[:3]):
+            top_probabilities.append(Text(f"Value N{i+1}: {table[e[0][1]]}, {e[0][0]*100:.2f}%", font_size = 20))
+            if not i:
+                top_probabilities[-1].next_to(probability_axes, UP)
+                top_probabilities[-1].align_to(probability_axes, RIGHT)
+            else:
+                top_probabilities[-1].next_to(top_probabilities[-2], UP)
+                top_probabilities[-1].align_to(top_probabilities[-2], RIGHT)
+        probability_mean_text.next_to(probability_axes, UP)
+        probability_mean_text.align_to(probability_axes, LEFT)
+        probability_deviation_text.next_to(probability_mean_text, UP)
+        probability_deviation_text.align_to(probability_mean_text, LEFT)
+        probability_perfect_text.next_to(probability_deviation_text, UP)
+        probability_perfect_text.align_to(probability_deviation_text, LEFT)
+        probability_text.next_to(probability_perfect_text, UP)
+        probability_text.align_to(probability_axes, RIGHT)
+        self.play(Write(probability_text))
+        self.add(probability_axes)
+        self.play(Write(probability_mean_text))
+        self.play(Write(probability_deviation_text))
+        self.play(Write(probability_perfect_text))
+        for e in top_probabilities:
+            self.play(Write(e))
+
+        final_axes = Axes((0,1), (0,1), height=3.5, width=5)
+        final_estimates = bdsum(probabilities_distribution, len(probabilities_distribution)-1)
+        print(len(probabilities_distribution))
+        print(len(final_estimates))
+        final_graph = final_axes.get_graph(
+            lambda x: final_estimates[math.ceil(x*len(probabilities_distribution))-1]/max(final_estimates),
+            use_smoothing=False,
+            color=YELLOW,
+            x_range=[0,1,EPSILON]
+        )
+        #self.add(final_graph)
         
