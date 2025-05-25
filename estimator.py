@@ -19,7 +19,7 @@ def bf(p, n, k):
     return math.comb(n, k)*(p**k)*((1-p)**(n-k))
 
 def wbd(n, k):
-    distribution = np.array([bf(i/n, n, k) for i in range(n+1)])
+    distribution = np.array([bf(i*EPSILON/n, n, k) for i in range(int((n+1)/EPSILON))])
     return  distribution / sum(distribution)
 
 def bd(p, n):
@@ -167,20 +167,23 @@ class Estimator_Continuous(Scene):
         self.play(Write(default_scores))
 
         probabilities_distribution = wbd(trials, successes)
-        print(probabilities_distribution)
+        print(len(probabilities_distribution))
 
         probabilty_axes = Axes((0,1), (0,1), height=3.5, width=5)
         probabilty_axes.add_coordinate_labels()
         probability_text = Text("Knowledge estimates", font_size = 28)
-        probability_mean = sum([probabilities_distribution[i]*i/blocks for i in range(trials+1)])
-        probability_deviation = standard_deviation(probabilities_distribution, [i for i in range(trials+1)], probability_mean)
+        probability_mean = sum([probabilities_distribution[i]*i*EPSILON/blocks for i in range(int((trials+1)/EPSILON))])
+        probability_deviation = standard_deviation(probabilities_distribution, [i*EPSILON/blocks for i in range(int((trials+1)/EPSILON))], probability_mean)
         probability_perfect = probabilities_distribution[-1]
-        probability_mean_text = Text(f"Mean: {table[math.floor(probability_mean)]:.2f}", font_size = 20)
+        print(probability_deviation, probability_mean)
+        #probability_mean_text = Text(f"Mean: {table[math.floor(probability_mean)]:.2f}", font_size = 20)
         probability_deviation_text = Text(f"Standard deviation: {probability_deviation:.2f}", font_size = 20)
         probability_perfect_text = Text(f"Perfect chance: {probability_perfect*100:.2f}%", font_size = 20)
         probability_graph = probabilty_axes.get_graph(
             lambda x: probabilities_distribution[math.ceil(x*len(probabilities_distribution))-1]/max(probabilities_distribution),
-            x_range=[0,1,0.0005]
+            use_smoothing=False,
+            color=YELLOW,
+            x_range=[0,1,EPSILON]
         )
         self.play(Write(probabilty_axes, lag_ratio=0.01, run_time=1))
         self.play(ShowCreation(probability_graph))
